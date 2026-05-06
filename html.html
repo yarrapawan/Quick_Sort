@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuickSort Quest – Algorithm Visualizer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-dark:       #050810;
+    --panel-glass:   rgba(10,20,40,0.75);
+    --panel-border:  rgba(0,200,255,0.18);
+    --neon-blue:     #2196F3;
+    --neon-purple:   #9C27B0;
+    --neon-red:      #F44336;
+    --neon-cyan:     #00BCD4;
+    --neon-teal:     #009688;
+    --neon-orange:   #FF9800;
+    --neon-green:    #4CAF50;
+    --font-game:     'Orbitron', monospace;
+    --font-ui:       'Rajdhani', sans-serif;
+    --font-mono:     'Share Tech Mono', monospace;
+  }
+
+  html, body {
+    width:100%; min-height:100%;
+    overflow-x:hidden;
+    background:var(--bg-dark);
+    font-family:var(--font-ui);
+    color:#fff;
+  }
+
+  /* BACKGROUND */
+  #bg-layer {
+    position:fixed; inset:0; z-index:0;
+    background:
+      linear-gradient(135deg,rgba(5,8,16,.94) 0%,rgba(10,20,50,.88) 100%),
+      url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?w=1600') center/cover no-repeat;
+  }
+  #bg-layer::after {
+    content:''; position:absolute; inset:0;
+    background:
+      radial-gradient(ellipse at 20% 50%,rgba(33,150,243,.09) 0%,transparent 60%),
+      radial-gradient(ellipse at 80% 20%,rgba(156,39,176,.09) 0%,transparent 60%);
+  }
+
+  /* PARTICLES */
+  #particles { position:fixed; inset:0; z-index:1; pointer-events:none; overflow:hidden; }
+  .particle {
+    position:absolute; border-radius:50%; opacity:0;
+    animation:floatP linear infinite;
+  }
+  @keyframes floatP {
+    0%   { transform:translateY(100vh) scale(0); opacity:0; }
+    10%  { opacity:.55; }
+    90%  { opacity:.25; }
+    100% { transform:translateY(-20px) scale(1); opacity:0; }
+  }
+
+  /* APP SHELL */
+  #app {
+    position:relative; z-index:2; min-height:100vh;
+    display:flex; flex-direction:column;
+    align-items:center; padding:14px 12px 28px; gap:12px;
+  }
+
+  /* HEADER */
+  #header { width:100%; max-width:1180px; text-align:center; padding:10px 0 2px; }
+  #header h1 {
+    font-family:var(--font-game);
+    font-size:clamp(1.3rem,3.8vw,2.4rem);
+    font-weight:900; letter-spacing:3px;
+    background:linear-gradient(90deg,var(--neon-blue),var(--neon-cyan),var(--neon-purple));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 18px rgba(33,150,243,.55));
+    animation:titlePulse 3s ease-in-out infinite;
+  }
+  @keyframes titlePulse {
+    0%,100% { filter:drop-shadow(0 0 18px rgba(33,150,243,.55)); }
+    50%     { filter:drop-shadow(0 0 32px rgba(0,188,212,.9)); }
+  }
+  #header p {
+    font-family:var(--font-mono); font-size:.72rem;
+    color:rgba(0,200,255,.5); margin-top:3px; letter-spacing:2px;
+  }
+
+  /* GLASS CARD */
+  .glass {
+    background:var(--panel-glass);
+    border:1px solid var(--panel-border); border-radius:18px;
+    backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    box-shadow:0 8px 32px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+
+  /* RECORDING BAR */
+  #rec-bar {
+    width:100%; max-width:1180px;
+    display:flex; align-items:center; gap:10px;
+    padding:7px 18px; justify-content:flex-end; min-height:34px; border-radius:12px;
+  }
+  #rec-dot {
+    width:10px; height:10px; border-radius:50%;
+    background:var(--neon-red); box-shadow:0 0 10px var(--neon-red);
+    animation:recBlink 1s ease-in-out infinite; display:none;
+  }
+  @keyframes recBlink { 0%,100%{opacity:1} 50%{opacity:.15} }
+  #rec-timer { font-family:var(--font-mono); font-size:.75rem; color:var(--neon-red); display:none; }
+  #rec-status { font-family:var(--font-game); font-size:.62rem; letter-spacing:1px; color:rgba(255,255,255,.5); }
+
+  /* CONTROLS */
+  #controls {
+    width:100%; max-width:1180px; padding:13px 20px;
+    display:flex; flex-wrap:wrap; gap:10px;
+    align-items:center; justify-content:center;
+  }
+  .ctrl-group { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:center; }
+  .ctrl-label { font-family:var(--font-mono); font-size:.68rem; color:rgba(0,200,255,.65); text-transform:uppercase; letter-spacing:1px; }
+
+  #array-input {
+    background:rgba(0,0,0,.5); border:1px solid rgba(0,188,212,.4); border-radius:10px;
+    color:var(--neon-cyan); font-family:var(--font-mono); font-size:.84rem;
+    padding:8px 14px; width:220px; outline:none;
+    transition:border-color .3s,box-shadow .3s;
+  }
+  #array-input:focus { border-color:var(--neon-cyan); box-shadow:0 0 12px rgba(0,188,212,.4); }
+
+  .btn {
+    font-family:var(--font-game); font-size:.6rem; font-weight:700; letter-spacing:1px;
+    padding:9px 15px; border:none; border-radius:10px; cursor:pointer;
+    transition:all .2s; position:relative; overflow:hidden;
+    text-transform:uppercase; white-space:nowrap; color:#fff;
+  }
+  .btn::before { content:''; position:absolute; inset:0; background:rgba(255,255,255,.15); opacity:0; transition:opacity .2s; }
+  .btn:hover::before { opacity:1; }
+  .btn:active { transform:scale(.95); }
+  .btn:disabled { opacity:.35; cursor:not-allowed; transform:none !important; }
+
+  .btn-start  { background:linear-gradient(135deg,#1565C0,#2196F3); box-shadow:0 0 14px rgba(33,150,243,.5); }
+  .btn-pause  { background:linear-gradient(135deg,#E65100,#FF9800); box-shadow:0 0 14px rgba(255,152,0,.5); }
+  .btn-resume { background:linear-gradient(135deg,#00695C,#009688); box-shadow:0 0 14px rgba(0,150,136,.5); }
+  .btn-reset  { background:linear-gradient(135deg,#37474F,#607D8B); box-shadow:0 0 10px rgba(96,125,139,.4); }
+  .btn-record { background:linear-gradient(135deg,#880E4F,#E91E63); box-shadow:0 0 14px rgba(233,30,99,.5); }
+  .btn-mute   { background:linear-gradient(135deg,#4A148C,#9C27B0); box-shadow:0 0 10px rgba(156,39,176,.4); }
+  .btn-music  { background:linear-gradient(135deg,#006064,#00BCD4); box-shadow:0 0 10px rgba(0,188,212,.4); }
+
+  #speed-slider {
+    -webkit-appearance:none; width:110px; height:6px;
+    background:linear-gradient(90deg,var(--neon-blue),var(--neon-purple));
+    border-radius:3px; outline:none; cursor:pointer;
+  }
+  #speed-slider::-webkit-slider-thumb {
+    -webkit-appearance:none; width:18px; height:18px; border-radius:50%;
+    background:var(--neon-cyan); box-shadow:0 0 8px var(--neon-cyan); cursor:pointer;
+  }
+
+  /* INFO BADGES */
+  #info-panel {
+    width:100%; max-width:1180px; padding:10px 20px;
+    display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-items:center;
+  }
+  .info-badge {
+    display:flex; align-items:center; gap:8px;
+    background:rgba(0,0,0,.45); border-radius:10px;
+    padding:7px 14px; border:1px solid rgba(255,255,255,.07);
+  }
+  .info-key { font-family:var(--font-mono); font-size:.65rem; color:rgba(255,255,255,.4); text-transform:uppercase; }
+  .info-val { font-family:var(--font-game); font-size:.8rem; font-weight:700; }
+  .info-pivot .info-val { color:var(--neon-red);    text-shadow:0 0 8px var(--neon-red); }
+  .info-i     .info-val { color:var(--neon-blue);   text-shadow:0 0 8px var(--neon-blue); }
+  .info-j     .info-val { color:var(--neon-purple); text-shadow:0 0 8px var(--neon-purple); }
+  .info-cmp   .info-val { color:var(--neon-cyan);   font-size:.7rem; }
+  .info-op    .info-val { color:var(--neon-orange); font-size:.7rem; }
+
+  /* STAGE */
+  #stage-wrapper { width:100%; max-width:1180px; padding:30px 20px 32px; position:relative; min-height:180px; }
+  #stage { display:flex; align-items:flex-end; justify-content:center; gap:10px; min-height:140px; flex-wrap:wrap; }
+
+  /* CHARACTER BLOCK */
+  .char-wrap { display:flex; flex-direction:column; align-items:center; gap:4px; position:relative; transition:transform .5s cubic-bezier(.34,1.56,.64,1); }
+  .char-index { font-family:var(--font-mono); font-size:.58rem; color:rgba(255,255,255,.28); }
+
+  .char-body {
+    position:relative; width:58px; height:58px; border-radius:14px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+    transition:background .3s,box-shadow .3s; font-weight:700;
+    animation:idleBounce 2.2s ease-in-out infinite;
+  }
+  @keyframes idleBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+
+  /* Pure-CSS face */
+  .char-eyes { display:flex; gap:7px; }
+  .eye { width:7px; height:7px; border-radius:50%; background:rgba(0,0,0,.75); transition:all .2s; }
+  .char-mouth { width:18px; height:3px; border-radius:2px; background:rgba(0,0,0,.55); transition:all .2s; }
+
+  /* Emotional variants */
+  .char-body.emo-happy   .char-mouth { width:22px; border-radius:3px 3px 10px 10px; }
+  .char-body.emo-sad     .char-mouth { width:14px; border-radius:10px 10px 3px 3px; background:rgba(0,0,0,.6); }
+  .char-body.emo-shocked .eye        { width:8px; height:8px; }
+  .char-body.emo-shocked .char-mouth { width:10px; height:6px; border-radius:50%; }
+  .char-body.emo-cool    .eye        { height:3px; border-radius:2px; }
+  .char-body.emo-cheer   .char-mouth { width:24px; border-radius:3px 3px 12px 12px; }
+  .char-body.emo-cheer   .eye        { transform:scaleY(.45); }
+
+  .char-val { font-family:var(--font-game); font-size:.78rem; font-weight:900; color:rgba(0,0,0,.82); }
+
+  /* POINTER LABELS */
+  .ptr-label {
+    position:absolute; top:-30px;
+    font-family:var(--font-game); font-size:.56rem; font-weight:700;
+    padding:2px 8px; border-radius:6px; white-space:nowrap;
+    animation:ptrFloat 1.5s ease-in-out infinite; z-index:10;
+  }
+  @keyframes ptrFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+  .ptr-i   { background:var(--neon-blue);   box-shadow:0 0 10px var(--neon-blue); color:#fff; }
+  .ptr-j   { background:var(--neon-purple); box-shadow:0 0 10px var(--neon-purple); color:#fff; }
+  .ptr-piv { background:var(--neon-red);    box-shadow:0 0 14px var(--neon-red); color:#fff; }
+
+  /* ELEMENT STATES */
+  .s-default   { background:linear-gradient(135deg,#9E9E9E,#E0E0E0); box-shadow:0 4px 14px rgba(0,0,0,.4); }
+  .s-pivot     { background:linear-gradient(135deg,#c62828,#F44336); box-shadow:0 0 26px rgba(244,67,54,.85),0 4px 14px rgba(0,0,0,.4); }
+  .s-ptr-i     { background:linear-gradient(135deg,#0d47a1,#2196F3); box-shadow:0 0 22px rgba(33,150,243,.75),0 4px 14px rgba(0,0,0,.4); }
+  .s-ptr-j     { background:linear-gradient(135deg,#4a148c,#9C27B0); box-shadow:0 0 22px rgba(156,39,176,.75),0 4px 14px rgba(0,0,0,.4); }
+  .s-compare   { background:linear-gradient(135deg,#006064,#00BCD4); box-shadow:0 0 22px rgba(0,188,212,.75),0 4px 14px rgba(0,0,0,.4); }
+  .s-lte       { background:linear-gradient(135deg,#004D40,#009688); box-shadow:0 0 22px rgba(0,150,136,.75),0 4px 14px rgba(0,0,0,.4); }
+  .s-gt        { background:linear-gradient(135deg,#38006b,#8E24AA); box-shadow:0 0 22px rgba(142,36,170,.75),0 4px 14px rgba(0,0,0,.4); }
+  .s-swap      { background:linear-gradient(135deg,#e65100,#FF9800); box-shadow:0 0 30px rgba(255,152,0,.95),0 4px 14px rgba(0,0,0,.4); animation:swapPop .5s ease-in-out; }
+  .s-sorted    { background:linear-gradient(135deg,#1B5E20,#4CAF50); box-shadow:0 0 26px rgba(76,175,80,.85),0 4px 14px rgba(0,0,0,.4); }
+  .s-celebrate { background:linear-gradient(135deg,#0d47a1,#42A5F5); box-shadow:0 0 30px rgba(66,165,245,.95),0 4px 14px rgba(0,0,0,.3); animation:celebratePop .6s ease-in-out infinite alternate; }
+
+  @keyframes swapPop {
+    0%  { transform:scale(1) rotate(0); }
+    30% { transform:scale(1.35) rotate(-9deg); }
+    60% { transform:scale(1.2) rotate(9deg); }
+    100%{ transform:scale(1) rotate(0); }
+  }
+  @keyframes celebratePop {
+    0%  { transform:scale(1) rotate(-4deg); }
+    100%{ transform:scale(1.12) rotate(4deg); }
+  }
+
+  /* EXPLANATION PANEL */
+  #explanation { width:100%; max-width:1180px; display:flex; flex-direction:column; overflow:hidden; }
+
+  #exp-header {
+    display:flex; align-items:center;
+    border-bottom:1px solid rgba(0,200,255,.13); padding:0 20px;
+  }
+  .exp-tab {
+    font-family:var(--font-game); font-size:.58rem; letter-spacing:1.5px;
+    padding:10px 16px 9px; color:rgba(255,255,255,.38);
+    border-bottom:2px solid transparent; text-transform:uppercase;
+  }
+  .exp-tab.active { color:var(--neon-cyan); border-bottom-color:var(--neon-cyan); }
+  #step-counter { margin-left:auto; font-family:var(--font-mono); font-size:.65rem; color:rgba(255,255,255,.3); padding:6px 14px; }
+
+  #exp-body {
+    display:grid; grid-template-columns:3fr 2fr; gap:0; min-height:150px;
+  }
+  @media(max-width:700px) { #exp-body { grid-template-columns:1fr; } }
+
+  /* Left — current step */
+  #exp-current {
+    padding:16px 22px; border-right:1px solid rgba(0,200,255,.1);
+    display:flex; flex-direction:column; gap:5px;
+  }
+  #exp-label {
+    font-family:var(--font-mono); font-size:.6rem; letter-spacing:1.5px;
+    text-transform:uppercase; color:rgba(255,255,255,.28);
+  }
+  #exp-title {
+    font-family:var(--font-game); font-size:.82rem; font-weight:700;
+    letter-spacing:.4px; line-height:1.4;
+    animation:fadeUp .35s ease-out;
+  }
+  #exp-detail {
+    font-family:var(--font-ui); font-size:.96rem; font-weight:600;
+    line-height:1.6; color:rgba(255,255,255,.88);
+    animation:fadeUp .35s ease-out .04s both;
+  }
+  #exp-why {
+    font-family:var(--font-ui); font-size:.82rem; font-weight:500;
+    line-height:1.55; color:rgba(255,255,255,.48);
+    margin-top:3px; padding-top:6px;
+    border-top:1px solid rgba(255,255,255,.07);
+    animation:fadeUp .35s ease-out .08s both;
+  }
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(8px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  /* Color themes for title */
+  .tc-compare { color:var(--neon-cyan); }
+  .tc-move-i  { color:var(--neon-blue); }
+  .tc-move-j  { color:var(--neon-purple); }
+  .tc-swap    { color:var(--neon-orange); }
+  .tc-correct { color:var(--neon-green); }
+  .tc-recurse { color:#64B5F6; }
+
+  /* Right — log */
+  #exp-log-col { padding:14px 18px; display:flex; flex-direction:column; }
+  #exp-log-label { font-family:var(--font-mono); font-size:.6rem; letter-spacing:1.5px; text-transform:uppercase; color:rgba(255,255,255,.28); margin-bottom:7px; }
+  #exp-log { flex:1; overflow-y:auto; max-height:140px; display:flex; flex-direction:column; gap:3px; scrollbar-width:thin; scrollbar-color:rgba(0,200,255,.2) transparent; }
+  .log-entry {
+    font-family:var(--font-mono); font-size:.67rem;
+    padding:3px 0 3px 9px; border-left:2px solid rgba(255,255,255,.1);
+    color:rgba(255,255,255,.38); line-height:1.45;
+    animation:fadeUp .3s ease-out;
+  }
+  .log-entry.fresh  { color:rgba(255,255,255,.78); border-left-color:var(--neon-cyan); }
+  .log-entry.l-swap { border-left-color:var(--neon-orange); color:rgba(255,152,0,.85); }
+  .log-entry.l-done { border-left-color:var(--neon-green);  color:rgba(76,175,80,.9); }
+  .log-entry.l-rec  { border-left-color:var(--neon-blue);   color:rgba(100,181,246,.85); }
+
+  /* TOAST */
+  #toast {
+    position:fixed; top:18px; left:50%;
+    transform:translateX(-50%) translateY(-80px);
+    background:rgba(8,18,38,.97); border:1px solid var(--neon-cyan); border-radius:12px;
+    padding:11px 26px; font-family:var(--font-game); font-size:.7rem; color:var(--neon-cyan);
+    box-shadow:0 0 20px rgba(0,188,212,.4); z-index:9999;
+    transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .4s;
+    opacity:0; letter-spacing:1px; text-align:center;
+  }
+  #toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+
+  /* CONFETTI */
+  #confetti-layer { position:fixed; inset:0; z-index:100; pointer-events:none; overflow:hidden; }
+  .confetti-piece { position:absolute; border-radius:2px; animation:confettiFall linear forwards; }
+  @keyframes confettiFall { 0%{transform:translateY(-20px) rotate(0);opacity:1} 100%{transform:translateY(105vh) rotate(720deg);opacity:0} }
+
+  /* VICTORY */
+  #victory { display:none; position:fixed; inset:0; z-index:200; background:rgba(0,0,0,.78); backdrop-filter:blur(10px); align-items:center; justify-content:center; flex-direction:column; gap:18px; }
+  #victory.show { display:flex; }
+  #victory h2 {
+    font-family:var(--font-game); font-size:clamp(1.5rem,5vw,3rem); font-weight:900;
+    background:linear-gradient(90deg,var(--neon-green),var(--neon-cyan),var(--neon-green));
+    background-size:200%; -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    animation:shimmer 2s linear infinite,victoryBounce .6s ease-out;
+    letter-spacing:4px; text-align:center; padding:0 20px;
+  }
+  @keyframes shimmer { 0%{background-position:0%} 100%{background-position:200%} }
+  @keyframes victoryBounce { 0%{transform:scale(0) rotate(-10deg)} 60%{transform:scale(1.15) rotate(4deg)} 100%{transform:scale(1) rotate(0)} }
+  #victory p { font-family:var(--font-mono); font-size:.9rem; color:rgba(255,255,255,.62); text-align:center; max-width:500px; padding:0 20px; line-height:1.6; }
+  .btn-victory {
+    font-family:var(--font-game); font-size:.7rem; font-weight:700; padding:12px 30px;
+    border-radius:12px; border:none; cursor:pointer;
+    background:linear-gradient(135deg,#1B5E20,#4CAF50); color:#fff;
+    box-shadow:0 0 20px rgba(76,175,80,.6); letter-spacing:1px;
+    text-transform:uppercase; transition:transform .2s;
+  }
+  .btn-victory:hover { transform:scale(1.05); }
+
+  @media(max-width:600px) {
+    .char-body { width:46px; height:46px; }
+    .char-val  { font-size:.68rem; }
+    #stage { gap:6px; }
+    .btn { font-size:.54rem; padding:8px 10px; }
+    #array-input { width:170px; }
+    #exp-title  { font-size:.74rem; }
+    #exp-detail { font-size:.86rem; }
+  }
+</style>
+</head>
+<body>
+
+<div id="bg-layer"></div>
+<div id="particles"></div>
+<div id="confetti-layer"></div>
+
+<div id="victory">
+  <h2>QUICK SORT COMPLETE</h2>
+  <p>All elements are now in their correct sorted positions. The algorithm has finished running through every recursive partition.</p>
+  <button class="btn-victory" onclick="closeVictory()">Sort Again</button>
+</div>
+
+<div id="toast"></div>
+
+<div id="app">
+
+  <div id="header">
+    <h1>QUICKSORT QUEST</h1>
+    <p>// INTERACTIVE ALGORITHM VISUALIZER //</p>
+  </div>
+
+  <div id="rec-bar" class="glass">
+    <div id="rec-dot"></div>
+    <span id="rec-timer">00:00</span>
+    <span id="rec-status">READY</span>
+  </div>
+
+  <div id="controls" class="glass">
+    <div class="ctrl-group">
+      <span class="ctrl-label">Array:</span>
+      <input id="array-input" type="text" value="64,34,25,12,22,11,90,45" placeholder="e.g. 64,34,25,12">
+    </div>
+    <div class="ctrl-group">
+      <button class="btn btn-start"  id="btn-start"  onclick="startSort()">Start</button>
+      <button class="btn btn-pause"  id="btn-pause"  onclick="pauseSort()"  disabled>Pause</button>
+      <button class="btn btn-resume" id="btn-resume" onclick="resumeSort()" disabled>Resume</button>
+      <button class="btn btn-reset"  id="btn-reset"  onclick="resetAll()">Reset</button>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">Speed:</span>
+      <input id="speed-slider" type="range" min="1" max="10" value="5">
+    </div>
+    <div class="ctrl-group">
+      <button class="btn btn-record" id="btn-record" onclick="toggleRecord()">Record</button>
+      <button class="btn btn-mute"   id="btn-mute"   onclick="toggleMute()">Narrate: ON</button>
+      <button class="btn btn-music"  id="btn-music"  onclick="toggleMusic()">Music: OFF</button>
+    </div>
+  </div>
+
+  <div id="info-panel" class="glass">
+    <div class="info-badge info-pivot">
+      <span class="info-key">Pivot Value</span>
+      <span class="info-val" id="info-pivot">—</span>
+    </div>
+    <div class="info-badge info-i">
+      <span class="info-key">Pointer i</span>
+      <span class="info-val" id="info-i">—</span>
+    </div>
+    <div class="info-badge info-j">
+      <span class="info-key">Pointer j</span>
+      <span class="info-val" id="info-j">—</span>
+    </div>
+    <div class="info-badge info-cmp" style="flex:1;min-width:160px;">
+      <span class="info-key">Comparison</span>
+      <span class="info-val" id="info-cmp">—</span>
+    </div>
+    <div class="info-badge info-op" style="flex:1;min-width:140px;">
+      <span class="info-key">Operation</span>
+      <span class="info-val" id="info-op">Waiting</span>
+    </div>
+  </div>
+
+  <div id="stage-wrapper" class="glass">
+    <div id="stage"></div>
+  </div>
+
+  <div id="explanation" class="glass">
+    <div id="exp-header">
+      <span class="exp-tab active">Current Step</span>
+      <span class="exp-tab" style="color:rgba(255,255,255,.22);">Step Log</span>
+      <span id="step-counter">Step 0 / 0</span>
+    </div>
+    <div id="exp-body">
+      <div id="exp-current">
+        <span id="exp-label">ACTION</span>
+        <div id="exp-title" class="tc-compare">Ready to begin</div>
+        <div id="exp-detail">Enter a comma-separated list of numbers above and press Start to launch the visualization. Each step of the Quick Sort algorithm will be explained here in detail as it runs.</div>
+        <div id="exp-why"></div>
+      </div>
+      <div id="exp-log-col">
+        <div id="exp-log-label">Step History</div>
+        <div id="exp-log"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ================================================================
+   QUICKSORT QUEST — Engine
+   No emojis. Detailed step-by-step explanations.
+   ================================================================ */
+
+let array = [], steps = [], stepIndex = 0, totalSteps = 0;
+let isRunning = false, isPaused = false, animTimer = null;
+let isMuted = false, isMusicOn = false;
+let isRecording = false, mediaRecorder = null, recordedChunks = [];
+let recInterval = null, recSeconds = 0;
+let sortedSet = new Set();
+
+// ── AUDIO ──────────────────────────────────────────────────────
+let audioCtx = null, musicGain = null, musicLoop = null;
+function getCtx() { return audioCtx || (audioCtx = new (window.AudioContext||window.webkitAudioContext)()); }
+
+function startMusic() {
+  const ctx = getCtx();
+  musicGain = ctx.createGain(); musicGain.gain.value = .06; musicGain.connect(ctx.destination);
+  const scale = [261.63,293.66,329.63,349.23,392,440,493.88];
+  let t = ctx.currentTime;
+  function loop() {
+    for (let k=0;k<16;k++) {
+      const osc=ctx.createOscillator(), g=ctx.createGain();
+      osc.type='sine'; osc.frequency.value=scale[Math.floor(Math.random()*scale.length)];
+      g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.35,t+.06); g.gain.exponentialRampToValueAtTime(.001,t+.55);
+      osc.connect(g); g.connect(musicGain); osc.start(t); osc.stop(t+.6); t+=.56;
+    }
+    musicLoop = setTimeout(loop,8900);
+  }
+  loop(); isMusicOn=true;
+  document.getElementById('btn-music').textContent='Music: ON';
+}
+function stopMusic() { clearTimeout(musicLoop); if(musicGain)musicGain.gain.value=0; isMusicOn=false; document.getElementById('btn-music').textContent='Music: OFF'; }
+function toggleMusic() { isMusicOn?stopMusic():startMusic(); }
+
+function speak(txt) {
+  if(isMuted||!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(txt); u.rate=1.05; u.pitch=1; u.volume=.92;
+  window.speechSynthesis.speak(u);
+}
+function toggleMute() {
+  isMuted=!isMuted; window.speechSynthesis&&window.speechSynthesis.cancel();
+  document.getElementById('btn-mute').textContent=isMuted?'Narrate: OFF':'Narrate: ON';
+}
+
+function beep(freq,type,dur) {
+  try {
+    const ctx=getCtx(),osc=ctx.createOscillator(),g=ctx.createGain();
+    osc.type=type; osc.frequency.value=freq;
+    g.gain.setValueAtTime(.22,ctx.currentTime); g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+dur);
+    osc.connect(g); g.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime+dur);
+  }catch(e){}
+}
+function sfxSwap()    { beep(660,'sawtooth',.18); }
+function sfxMove()    { beep(440,'sine',.1); }
+function sfxCorrect() { beep(880,'sine',.22); }
+function sfxWin()     { [523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,'sine',.3),i*125)); }
+
+// ── PARTICLES ─────────────────────────────────────────────────
+(function(){
+  const c=document.getElementById('particles'), cols=['#2196F3','#9C27B0','#00BCD4','#4CAF50','#FF9800'];
+  for(let k=0;k<30;k++){
+    const p=document.createElement('div'); p.className='particle';
+    const s=2+Math.random()*5;
+    p.style.cssText=`width:${s}px;height:${s}px;left:${Math.random()*100}%;background:${cols[k%5]};animation-duration:${6+Math.random()*10}s;animation-delay:${Math.random()*10}s;`;
+    c.appendChild(p);
+  }
+})();
+
+// ── PARSE ─────────────────────────────────────────────────────
+function parseArr() {
+  return document.getElementById('array-input').value.split(',').map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=0);
+}
+
+// ── RENDER STAGE ──────────────────────────────────────────────
+function renderStage(arr, hl={}) {
+  const stage = document.getElementById('stage');
+  stage.innerHTML = '';
+  arr.forEach((val,idx) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'char-wrap';
+
+    // pointer badges
+    const ptrs = [];
+    if(hl.pivot===idx) ptrs.push('<span class="ptr-label ptr-piv">PIVOT</span>');
+    if(hl.i===idx)     ptrs.push('<span class="ptr-label ptr-i" style="top:-46px">i</span>');
+    if(hl.j===idx)     ptrs.push('<span class="ptr-label ptr-j" style="top:-30px">j</span>');
+
+    // determine state class + emotion
+    let sc='s-default', emo='';
+    if(sortedSet.has(idx))             { sc='s-sorted';  emo='emo-happy'; }
+    if(hl.pivot===idx)                 { sc='s-pivot';   emo='emo-cool'; }
+    if(hl.compared?.includes(idx))     { sc='s-compare'; emo=''; }
+    if(hl.lte===idx)                   { sc='s-lte';     emo='emo-happy'; }
+    if(hl.gt===idx)                    { sc='s-gt';      emo='emo-sad'; }
+    if(hl.swapping?.includes(idx))     { sc='s-swap';    emo='emo-shocked'; }
+    if(hl.i===idx && !hl.swapping?.includes(idx)) { sc='s-ptr-i'; emo=''; }
+    if(hl.j===idx && !hl.swapping?.includes(idx)) { sc='s-ptr-j'; emo=''; }
+    if(hl.celebrate)                   { sc='s-celebrate'; emo='emo-cheer'; }
+
+    wrap.innerHTML = `
+      ${ptrs.join('')}
+      <div class="char-body ${sc} ${emo}">
+        <div class="char-eyes"><div class="eye"></div><div class="eye"></div></div>
+        <div class="char-mouth"></div>
+        <div class="char-val">${val}</div>
+      </div>
+      <div class="char-index">[${idx}]</div>`;
+    stage.appendChild(wrap);
+  });
+}
+
+// ── EXPLANATION ───────────────────────────────────────────────
+const logEl = document.getElementById('exp-log');
+
+function setExplain(title, detail, why, tc) {
+  const t=document.getElementById('exp-title'), d=document.getElementById('exp-detail'), w=document.getElementById('exp-why');
+  // re-trigger animation
+  [t,d,w].forEach(el=>{el.style.animation='none'; void el.offsetWidth; el.style.animation='';});
+  t.className = tc||'tc-compare'; t.textContent = title;
+  d.textContent = detail;
+  w.textContent = why||'';
+}
+
+function logAdd(txt, cls='') {
+  const e=document.createElement('div'); e.className=`log-entry fresh ${cls}`; e.textContent=txt;
+  logEl.prepend(e);
+  [...logEl.children].forEach((el,i)=>{ if(i>0) el.classList.remove('fresh'); });
+  while(logEl.children.length>35) logEl.removeChild(logEl.lastChild);
+}
+
+function setInfo(pivot, i, j, cmp, op) {
+  document.getElementById('info-pivot').textContent = pivot!==null ? pivot : '—';
+  document.getElementById('info-i').textContent     = i!==null ? `idx ${i}` : '—';
+  document.getElementById('info-j').textContent     = j!==null ? `idx ${j}` : '—';
+  document.getElementById('info-cmp').textContent   = cmp||'—';
+  document.getElementById('info-op').textContent    = op||'—';
+}
+
+function updCounter() {
+  document.getElementById('step-counter').textContent = `Step ${stepIndex} / ${totalSteps}`;
+}
+
+// ── STEP GENERATOR ────────────────────────────────────────────
+function generateSteps(arr) {
+  const out=[], a=[...arr];
+  const push=o=>out.push(o);
+
+  function partition(lo, hi) {
+    const piv=a[lo]; let i=lo+1, j=hi;
+
+    push({ type:'pick-pivot', arr:[...a], pivot:lo, i, j,
+      title:`Partition [${lo}..${hi}] — Pivot selected: A[${lo}] = ${piv}`,
+      detail:`Quick Sort begins partitioning the subarray from index ${lo} to ${hi} `
+            +`(${hi-lo+1} elements: [${a.slice(lo,hi+1).join(', ')}]). `
+            +`The first element A[${lo}] = ${piv} is selected as the pivot. `
+            +`Pointer i is initialized to ${i} (one step right of the pivot), `
+            +`and pointer j is initialized to ${j} (the rightmost index of this subarray). `
+            +`i will scan rightward for elements greater than ${piv}; j will scan leftward for elements <= ${piv}.`,
+      why:`Strategy: first-element pivot. i and j work inward from both sides, identifying misplaced elements that need to be swapped into the correct partition.`,
+      tc:'tc-compare',
+      voice:`Partitioning from index ${lo} to ${hi}. Pivot is ${piv}. Pointer i at ${i}, pointer j at ${j}.`,
+      log:`[PARTITION lo=${lo} hi=${hi}]  pivot = A[${lo}] = ${piv}`, lc:'l-rec' });
+
+    while(true) {
+      while(i<=j && a[i]<=piv) {
+        push({ type:'move-i', arr:[...a], pivot:lo, i, j, lte:i,
+          title:`i advances right — A[${i}] = ${a[i]} is <= pivot (${piv})`,
+          detail:`Pointer i is at index ${i}, pointing to the value ${a[i]}. `
+                +`Condition: A[i] <= pivot, that is ${a[i]} <= ${piv} — this is TRUE. `
+                +`This element already belongs in the left (smaller) partition, so it needs no swap. `
+                +`Pointer i steps right from ${i} to ${i+1} and the scan continues.`,
+          why:`Rule: advance i rightward as long as A[i] <= pivot. All indices below i are confirmed to hold values <= pivot and are correctly placed in the left partition.`,
+          tc:'tc-move-i',
+          voice:`A[${i}] equals ${a[i]}, which is less than or equal to pivot ${piv}. Pointer i advances right to index ${i+1}.`,
+          log:`  i-right: A[${i}]=${a[i]} <= ${piv}  →  i = ${i+1}`, lc:'' });
+        i++;
+      }
+      while(j>=i && a[j]>piv) {
+        push({ type:'move-j', arr:[...a], pivot:lo, i, j, gt:j,
+          title:`j retreats left — A[${j}] = ${a[j]} is > pivot (${piv})`,
+          detail:`Pointer j is at index ${j}, pointing to the value ${a[j]}. `
+                +`Condition: A[j] > pivot, that is ${a[j]} > ${piv} — this is TRUE. `
+                +`This element already belongs in the right (larger) partition, so it needs no swap. `
+                +`Pointer j steps left from ${j} to ${j-1} and the scan continues.`,
+          why:`Rule: retreat j leftward as long as A[j] > pivot. All indices above j are confirmed to hold values > pivot and are correctly placed in the right partition.`,
+          tc:'tc-move-j',
+          voice:`A[${j}] equals ${a[j]}, which is greater than pivot ${piv}. Pointer j retreats left to index ${j-1}.`,
+          log:`  j-left:  A[${j}]=${a[j]} >  ${piv}  →  j = ${j-1}`, lc:'' });
+        j--;
+      }
+
+      if(i<j) {
+        push({ type:'swap', arr:[...a], pivot:lo, i, j, swapping:[i,j],
+          title:`Swap — A[${i}] = ${a[i]} and A[${j}] = ${a[j]}  (because i=${i} < j=${j})`,
+          detail:`Both pointers have stopped on misplaced elements. `
+                +`Pointer i stopped at index ${i} because A[${i}] = ${a[i]} > pivot ${piv} — this value is too large and belongs in the right partition. `
+                +`Pointer j stopped at index ${j} because A[${j}] = ${a[j]} <= pivot ${piv} — this value is too small and belongs in the left partition. `
+                +`Since i (${i}) < j (${j}), the partition scan is NOT yet complete. `
+                +`We swap A[${i}] and A[${j}] to move each element to its correct side.`,
+          why:`When i stops before j, both elements are on the wrong side. Swapping them fixes both simultaneously. The scan then resumes from the updated i and j positions.`,
+          tc:'tc-swap',
+          voice:`i is ${i}, j is ${j}. i is less than j. Swapping A[${i}] equals ${a[i]} with A[${j}] equals ${a[j]}.`,
+          log:`  SWAP: A[${i}]=${a[i]} <--> A[${j}]=${a[j]}`, lc:'l-swap' });
+        [a[i],a[j]]=[a[j],a[i]];
+        push({ type:'swapped', arr:[...a], pivot:lo, i, j,
+          title:`Swap complete — values ${a[i]} and ${a[j]} exchanged successfully`,
+          detail:`The swap is done. A[${i}] is now ${a[i]} (value <= pivot, correct left partition). `
+                +`A[${j}] is now ${a[j]} (value > pivot, correct right partition). `
+                +`Both previously misplaced elements are now on their correct side. `
+                +`Pointer i will continue scanning right from index ${i} and pointer j will continue scanning left from index ${j}.`,
+          why:`After the swap, the invariant is maintained: all elements left of i are <= pivot, all elements right of j are > pivot. Scanning resumes.`,
+          tc:'tc-correct',
+          voice:`Swap complete. A[${i}] is now ${a[i]}, A[${j}] is now ${a[j]}. Resuming scan.`,
+          log:`  Post-swap: A[${i}]=${a[i]}  A[${j}]=${a[j]}`, lc:'' });
+      } else { break; }
+    }
+
+    // place pivot
+    push({ type:'place-pivot', arr:[...a], pivot:lo, i, j, swapping:[lo,j],
+      title:`Pointers crossed — Place pivot ${piv} at its final position (index ${j})`,
+      detail:`Pointers have met or crossed: i=${i} >= j=${j}. This signals that the scan is complete. `
+            +`At this point, index j=${j} is the correct final sorted position for the pivot ${piv}. `
+            +`All elements from index ${lo+1} to ${j} are <= ${piv} (left partition). `
+            +`All elements from index ${j+1} to ${hi} are > ${piv} (right partition). `
+            +`We now swap the pivot at A[${lo}]=${a[lo]} with A[${j}]=${a[j]} to place the pivot at index ${j}.`,
+      why:`When i >= j, j marks the partition boundary. The pivot is placed here so every element to its left is smaller and every element to its right is larger — the core invariant of Quick Sort.`,
+      tc:'tc-swap',
+      voice:`Pointers crossed. Placing pivot ${piv} at index ${j} by swapping with A[${j}] = ${a[j]}.`,
+      log:`  PLACE PIVOT ${piv} → index ${j}  (swap A[${lo}] with A[${j}])`, lc:'l-done' });
+    [a[lo],a[j]]=[a[j],a[lo]];
+    const pp=j;
+    push({ type:'pivot-placed', arr:[...a], pivotPos:pp, sorted:pp,
+      title:`Pivot ${a[pp]} permanently sorted at index ${pp}`,
+      detail:`A[${pp}] = ${a[pp]} is now in its exact correct position in the fully sorted array. `
+            +`This element will never move again. `
+            +`Everything to its left (indices ${lo} to ${pp-1}) has values <= ${a[pp]}. `
+            +`Everything to its right (indices ${pp+1} to ${hi}) has values > ${a[pp]}. `
+            +`Quick Sort will now recurse independently on the left subarray [${lo}..${pp-1}] `
+            +`and the right subarray [${pp+1}..${hi}].`,
+      why:`This is the fundamental invariant of Quick Sort: after each partition call, exactly one element (the pivot) is guaranteed to be in its final sorted position. Recursing on both sides progressively sorts the entire array.`,
+      tc:'tc-correct',
+      voice:`Pivot ${a[pp]} is permanently in its sorted position at index ${pp}. Recursing on both sub-partitions.`,
+      log:`  SORTED: A[${pp}] = ${a[pp]} is in final position`, lc:'l-done' });
+    return j;
+  }
+
+  function qs(lo, hi) {
+    if(lo>=hi) {
+      if(lo===hi) {
+        push({ type:'single', arr:[...a], sorted:lo,
+          title:`Base case — A[${lo}] = ${a[lo]} is a single element, already sorted`,
+          detail:`The recursive call on the subarray [${lo}..${lo}] contains exactly one element: ${a[lo]}. `
+                +`A subarray of length 1 is trivially sorted by definition — a single element has no neighbors to compare against. `
+                +`This element is marked as sorted and the recursion returns immediately.`,
+          why:`Base case of divide-and-conquer recursion: subarrays of length 0 or 1 require no action. They are already in their correct final position.`,
+          tc:'tc-correct',
+          voice:`Base case. Single element ${a[lo]} at index ${lo} is already sorted.`,
+          log:`  BASE: A[${lo}]=${a[lo]} trivially sorted`, lc:'l-done' });
+      }
+      return;
+    }
+    push({ type:'recurse', arr:[...a],
+      title:`Recursive call — Quick Sort on subarray [${lo} .. ${hi}]  (${hi-lo+1} elements)`,
+      detail:`Quick Sort is called recursively on the subarray spanning indices ${lo} through ${hi}, `
+            +`containing ${hi-lo+1} elements: [${a.slice(lo,hi+1).join(', ')}]. `
+            +`A new partition will be performed with A[${lo}] = ${a[lo]} as the pivot. `
+            +`This recursion is triggered because the previous pivot placed an element at a boundary, splitting the problem into two independent sub-problems.`,
+      why:`Divide and conquer: each recursive call works on a strictly smaller subarray. The depth of recursion is O(log n) on average, giving Quick Sort its O(n log n) average time complexity.`,
+      tc:'tc-recurse',
+      voice:`Recursive call. Quick Sort on subarray from index ${lo} to ${hi}, containing ${hi-lo+1} elements.`,
+      log:`RECURSE quickSort(${lo}, ${hi})  →  [${a.slice(lo,hi+1).join(',')}]`, lc:'l-rec' });
+    const p=partition(lo,hi);
+    qs(lo,p-1); qs(p+1,hi);
+  }
+
+  qs(0, a.length-1);
+
+  push({ type:'done', arr:[...a], celebrate:true,
+    title:`Quick Sort complete — ${a.length} elements sorted in ascending order`,
+    detail:`The entire array is now fully sorted: [${a.join(', ')}]. `
+          +`Quick Sort achieved this by repeatedly selecting a pivot, partitioning elements into left (<= pivot) and right (> pivot) groups, placing each pivot in its final position, and recursing on each half. `
+          +`The algorithm made ${out.length} total steps to sort ${a.length} elements. `
+          +`Average time complexity: O(n log n). Space complexity: O(log n) call stack.`,
+    why:`When every recursive call hits the base case (subarray of length 0 or 1), all elements are in their final sorted positions. The algorithm terminates.`,
+    tc:'tc-correct',
+    voice:`Quick Sort is complete. All ${a.length} elements are now sorted in ascending order.`,
+    log:`DONE — Sorted array: [${a.join(', ')}]`, lc:'l-done' });
+
+  return out;
+}
+
+// ── APPLY STEP ────────────────────────────────────────────────
+function applyStep(step) {
+  const hl={};
+  if(step.pivot!==undefined)  hl.pivot=step.pivot;
+  if(step.i!==undefined)      hl.i=step.i;
+  if(step.j!==undefined)      hl.j=step.j;
+  if(step.lte!==undefined)    hl.lte=step.lte;
+  if(step.gt!==undefined)     hl.gt=step.gt;
+  if(step.swapping)           hl.swapping=step.swapping;
+  if(step.celebrate)          hl.celebrate=true;
+  if(step.sorted!==undefined)   sortedSet.add(step.sorted);
+  if(step.pivotPos!==undefined) sortedSet.add(step.pivotPos);
+
+  renderStage(step.arr, hl);
+  updCounter();
+
+  const pv = step.pivot!==undefined ? step.arr[step.pivot] : null;
+  const iv = step.i!==undefined ? step.i : null;
+  const jv = step.j!==undefined ? step.j : null;
+  let cmp='—';
+  if(step.type==='move-i' && step.lte!==undefined) cmp=`A[${step.lte}]=${step.arr[step.lte]} <= ${pv}`;
+  else if(step.type==='move-j' && step.gt!==undefined) cmp=`A[${step.gt}]=${step.arr[step.gt]} > ${pv}`;
+  else if(step.swapping?.length===2) cmp=`A[${step.swapping[0]}] swap A[${step.swapping[1]}]`;
+  setInfo(pv, iv, jv, cmp, step.type.replace(/-/g,' ').toUpperCase());
+
+  setExplain(step.title, step.detail, step.why, step.tc);
+  logAdd(step.log, step.lc);
+
+  if(step.type==='swap'||step.type==='place-pivot') sfxSwap();
+  else if(step.type==='move-i'||step.type==='move-j') sfxMove();
+  else if(step.type==='pivot-placed'||step.type==='single') sfxCorrect();
+  if(step.voice) speak(step.voice);
+
+  if(step.type==='done') {
+    isRunning=false;
+    document.getElementById('btn-start').disabled=false;
+    document.getElementById('btn-pause').disabled=true;
+    document.getElementById('btn-resume').disabled=true;
+    sfxWin();
+    setTimeout(()=>{ stopRecordingAndSave(); launchConfetti(); showVictory(); },700);
+  }
+}
+
+// ── RUNNER ───────────────────────────────────────────────────
+function getDelay() { return Math.max(60, 1350 - parseInt(document.getElementById('speed-slider').value)*125); }
+
+function playStep() {
+  if(!isRunning||isPaused) return;
+  if(stepIndex>=steps.length) return;
+  applyStep(steps[stepIndex++]);
+  if(stepIndex<steps.length) animTimer=setTimeout(playStep,getDelay());
+}
+
+async function startSort() {
+  array=parseArr();
+  if(array.length<2){ showToast('Please enter at least 2 numbers'); return; }
+  sortedSet=new Set(); logEl.innerHTML='';
+  steps=generateSteps(array); totalSteps=steps.length; stepIndex=0;
+  isRunning=true; isPaused=false;
+  document.getElementById('btn-start').disabled=true;
+  document.getElementById('btn-pause').disabled=false;
+  document.getElementById('btn-resume').disabled=true;
+  updCounter(); playStep();
+}
+
+function pauseSort() {
+  isPaused=true; clearTimeout(animTimer);
+  window.speechSynthesis&&window.speechSynthesis.cancel();
+  document.getElementById('btn-pause').disabled=true;
+  document.getElementById('btn-resume').disabled=false;
+  setExplain('Paused','The visualization is paused at step '+stepIndex+' of '+totalSteps+'. Press Resume to continue.','You can adjust the speed slider before resuming.','tc-move-j');
+}
+
+function resumeSort() {
+  isPaused=false;
+  document.getElementById('btn-pause').disabled=false;
+  document.getElementById('btn-resume').disabled=true;
+  playStep();
+}
+
+function resetAll() {
+  clearTimeout(animTimer); isRunning=false; isPaused=false;
+  window.speechSynthesis&&window.speechSynthesis.cancel();
+  sortedSet=new Set(); steps=[]; stepIndex=0; totalSteps=0;
+  stopRecordingAndSave();
+  document.getElementById('btn-start').disabled=false;
+  document.getElementById('btn-pause').disabled=true;
+  document.getElementById('btn-resume').disabled=true;
+  const arr=parseArr(); if(arr.length) renderStage(arr); else document.getElementById('stage').innerHTML='';
+  logEl.innerHTML=''; updCounter();
+  setExplain('Ready to sort','Array has been reset. Modify the values above if desired, then press Start to run the visualization.','','tc-compare');
+  setInfo(null,null,null,'—','Ready');
+}
+
+// ── RECORDING ────────────────────────────────────────────────
+async function toggleRecord() { isRecording?stopRecordingAndSave():await startRecording(); }
+async function startRecording() {
+  try {
+    const stream=await navigator.mediaDevices.getDisplayMedia({video:{cursor:'always'},audio:true});
+    recordedChunks=[];
+    const mime=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+    mediaRecorder=new MediaRecorder(stream,{mimeType:mime});
+    mediaRecorder.ondataavailable=e=>{if(e.data.size>0)recordedChunks.push(e.data);};
+    mediaRecorder.onstop=saveRecording; mediaRecorder.start(500);
+    isRecording=true; recSeconds=0;
+    document.getElementById('rec-dot').style.display='block';
+    document.getElementById('rec-timer').style.display='block';
+    document.getElementById('btn-record').textContent='Stop Rec';
+    recInterval=setInterval(()=>{
+      recSeconds++;
+      const m=String(Math.floor(recSeconds/60)).padStart(2,'0');
+      const s=String(recSeconds%60).padStart(2,'0');
+      document.getElementById('rec-timer').textContent=`${m}:${s}`;
+    },1000);
+    document.getElementById('rec-status').textContent='RECORDING';
+    showToast('Recording started');
+  } catch(e) { showToast('Screen recording requires browser permission'); }
+}
+function stopRecordingAndSave() {
+  if(!isRecording||!mediaRecorder) return;
+  mediaRecorder.stop(); mediaRecorder.stream.getTracks().forEach(t=>t.stop());
+  isRecording=false; clearInterval(recInterval);
+  document.getElementById('rec-dot').style.display='none';
+  document.getElementById('rec-timer').style.display='none';
+  document.getElementById('btn-record').textContent='Record';
+  document.getElementById('rec-status').textContent='SAVING...';
+}
+function saveRecording() {
+  const blob=new Blob(recordedChunks,{type:'video/webm'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='quick_sort_visualization.webm'; a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById('rec-status').textContent='SAVED';
+  showToast('Recording saved: quick_sort_visualization.webm');
+}
+
+// ── CONFETTI ─────────────────────────────────────────────────
+function launchConfetti() {
+  const layer=document.getElementById('confetti-layer');
+  const cols=['#2196F3','#9C27B0','#00BCD4','#4CAF50','#FF9800','#F44336','#64B5F6'];
+  for(let k=0;k<90;k++){
+    const p=document.createElement('div'); p.className='confetti-piece';
+    const w=6+Math.random()*10,h=6+Math.random()*10;
+    p.style.cssText=`left:${Math.random()*100}%;width:${w}px;height:${h}px;background:${cols[Math.floor(Math.random()*cols.length)]};border-radius:${Math.random()>.5?'50%':'2px'};animation-duration:${2+Math.random()*2.5}s;animation-delay:${Math.random()*.8}s;`;
+    layer.appendChild(p);
+  }
+  setTimeout(()=>{layer.innerHTML='';},4500);
+}
+
+function showVictory()  { document.getElementById('victory').classList.add('show'); }
+function closeVictory() { document.getElementById('victory').classList.remove('show'); resetAll(); }
+
+let toastTimer=null;
+function showToast(msg) {
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),3400);
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+(function(){
+  renderStage(parseArr()); updCounter();
+  document.getElementById('btn-pause').disabled=true;
+  document.getElementById('btn-resume').disabled=true;
+  document.getElementById('array-input').addEventListener('input',()=>{
+    if(!isRunning){ sortedSet=new Set(); const a=parseArr(); if(a.length)renderStage(a); }
+  });
+})();
+</script>
+</body>
+</html>
